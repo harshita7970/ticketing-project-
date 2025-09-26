@@ -36,6 +36,7 @@ class Blockchain:
             "event": event,
             "ticket_id": ticket_id,
             "buyer": buyer,
+            "purchase_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         }
         self.pending_transactions.append(tx)
         return self.last_block["index"] + 1
@@ -101,7 +102,8 @@ with st.form("ticket_form", clear_on_submit=True):
         else:
             bc.new_ticket(organizer, event, ticket_id, buyer)
             block = bc.new_block(proof=123)
-            st.success(f"✅ Ticket {ticket_id} added in Block {block['index']}")
+            purchase_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            st.success(f"✅ Ticket {ticket_id} added in Block {block['index']} at {purchase_time}")
 
             # Generate QR code for ticket
             qr = qrcode.make(ticket_id)
@@ -119,6 +121,27 @@ if st.button("Check Ticket"):
         st.json(result)
     else:
         st.error("❌ Invalid or Fake Ticket!")
+
+# --- Summary View ---
+st.header("📊 Event Summary")
+
+summary = {}
+for block in bc.chain:
+    for tx in block["transactions"]:
+        event = tx["event"]
+        if event not in summary:
+            summary[event] = {"buyers": [], "times": []}
+        summary[event]["buyers"].append(tx["buyer"])
+        summary[event]["times"].append(tx["purchase_time"])
+
+if summary:
+    for event, data in summary.items():
+        with st.expander(f"Event: {event}"):
+            st.write("Total Buyers:", len(data["buyers"]))
+            st.write("Buyers List:", ", ".join(data["buyers"]))
+            st.write("Purchase Times:", ", ".join(data["times"]))
+else:
+    st.info("No tickets issued yet.")
 
 # --- Explorer ---
 st.header("📜 Blockchain Explorer")
